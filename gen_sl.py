@@ -85,11 +85,15 @@ for s,g in G.items():
     if g['far200']:fl.append('Below 200d >8.8%')
     if g['closed_low']:fl.append('Prior close at low')
     risk=(e['entry']-e['stop']) if e['entry'] else None
+    ep=e['entry'] if e['entry'] else float(c[-1]);rk=ep-e['stop'];rr_=(e['tgt']-ep)/rk if rk>0 and e['tgt']>ep else None
+    tmin=int(mins[e['i']]-570);leg_len=int(e['hi']-r0);rpct=rk/ep*100 if rk>0 else 0
+    chk=[('Early (within 45 min of open)',tmin<=45),('Fast first leg (30 bars or fewer)',leg_len<=30),('Stop 1.2% or wider',rpct>=1.2),('Pullback 32% or deeper',e['ret']*100>=32),('R:R 2 or less',rr_ is not None and rr_<=2)]
+    pts=sum(1 for _,ok in chk if ok);met=[n for n,ok in chk if ok];miss=[n for n,ok in chk if not ok]
     sp=[float(x) for x in c[rt[0]:][::2]]
     rows.append(dict(symbol=s,status=st,atr_pct=round(g['atr_pct'],1),leg_pct=round(e['leg']/e['base']*100,2),retrace=round(e['ret']*100),band_bars=int(e['k']),rsi=round(float(r[-1]),1),
         entry=None if e['entry'] is None else round(float(e['entry']),2),stop=round(float(e['stop']),2),target=round(float(e['tgt']),2),
         rr=None if not risk else round(float((e['tgt']-e['entry'])/risk),2),last=round(float(c[-1]),2),
-        time=str(t)[:16],flags=fl,skip=bool(fl),group='Mover' if s in ex else U.get('groups',{}).get(s,''),spark=[round(x,2) for x in sp],
+        time=str(t)[:16],flags=fl,pts=pts,met=met,miss=miss,skip=bool(fl),group='Mover' if s in ex else U.get('groups',{}).get(s,''),spark=[round(x,2) for x in sp],
         lv=[round(float(e['stop']),2),round(float(e['tgt']),2)],asof=str(pd.Timestamp(end).tz_convert('America/New_York'))[:16]))
 order={'Triggered':0,'Ready':1,'Cooling':2,'Target hit':3,'Stopped':4}
 rows.sort(key=lambda x:(order[x['status']],x['time']),reverse=False)
