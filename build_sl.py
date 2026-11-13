@@ -16,7 +16,7 @@ def row(r):
     s=H.escape(r['symbol']);tv=f'<a class="tv" href="https://www.tradingview.com/chart/?symbol={s}&amp;interval=1" target="_blank" rel="noopener" title="Open {s} on TradingView, 1 minute chart">{s}</a>'
     fl='; '.join(r['flags']) or ''
     pt=r['pts'];tip=H.escape('Meets: '+('; '.join(r['met']) or 'none')+'. Misses: '+('; '.join(r['miss']) or 'none')+'.',quote=True)
-    return (f'<tr data-st="{r["status"]}" data-skip="{int(r["skip"])}" data-sym="{s}" data-pts="{pt}" data-time="{r["time"]}"><td class="sym">{tv}</td><td class="st {r["status"].replace(" ","")}">{r["status"]}</td><td class="pts p{pt}" title="{tip}">{pt}/5</td><td class="ch">{spark(r)}</td>'
+    return (f'<tr data-st="{r["status"]}" data-skip="{int(r["skip"])}" data-sym="{s}" data-pts="{pt}" data-time="{r["time"]}"><td class="sym">{tv}</td><td class="st {r["status"].replace(" ","")}">{r["status"]}</td><td class="pts p{pt}" title="{tip}">{pt}/6</td><td class="ch">{spark(r)}</td>'
             f'<td class="n">{r["atr_pct"]:.1f}%</td><td class="n">{r["leg_pct"]:.1f}%</td><td class="n">{r["retrace"]}%</td><td class="n hn">{r["band_bars"]}</td><td class="n hn">{r["rsi"]:.0f}</td>'
             f'<td class="n">{f2(r["entry"]) or "–"}</td><td class="n">{f2(r["stop"])}</td><td class="n">{f2(r["target"])}</td><td class="n hn">{r["rr"] if r["rr"] else "–"}</td><td class="n hn">{f2(r["last"])}</td>'
             f'<td class="t" data-t="{r["time"]}">{ft(r["time"])}</td><td class="fl">{H.escape(fl) if fl else "clean"}</td></tr>')

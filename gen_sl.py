@@ -87,7 +87,7 @@ for s,g in G.items():
     risk=(e['entry']-e['stop']) if e['entry'] else None
     ep=e['entry'] if e['entry'] else float(c[-1]);rk=ep-e['stop'];rr_=(e['tgt']-ep)/rk if rk>0 and e['tgt']>ep else None
     tmin=int(mins[e['i']]-570);leg_len=int(e['hi']-r0);rpct=rk/ep*100 if rk>0 else 0
-    chk=[('Early (within 45 min of open)',tmin<=45),('Fast first leg (30 bars or fewer)',leg_len<=30),('Stop 1.2% or wider',rpct>=1.2),('Pullback 32% or deeper',e['ret']*100>=32),('R:R 2 or less',rr_ is not None and rr_<=2)]
+    chk=[('Early (within 45 min of open)',tmin<=45),('Fast first leg (30 bars or fewer)',leg_len<=30),('Stop 1.2% or wider',rpct>=1.2),('Pullback 32% or deeper',e['ret']*100>=32),('R:R 2 or less',rr_ is not None and rr_<=2),('Clean thrust (8 or fewer new highs in the first leg)',int((np.diff(np.maximum.accumulate(h[r0:e['hi']+1]))>0).sum())<=8)]
     pts=sum(1 for _,ok in chk if ok);met=[n for n,ok in chk if ok];miss=[n for n,ok in chk if not ok]
     sp=[float(x) for x in c[rt[0]:][::2]]
     rows.append(dict(symbol=s,status=st,atr_pct=round(g['atr_pct'],1),leg_pct=round(e['leg']/e['base']*100,2),retrace=round(e['ret']*100),band_bars=int(e['k']),rsi=round(float(r[-1]),1),
