@@ -21,7 +21,20 @@ def row(r):
             f'<td class="n">{f2(r["entry"]) or "–"}</td><td class="n">{f2(r["stop"])}</td><td class="n">{f2(r["target"])}</td><td class="n hn">{r["rr"] if r["rr"] else "–"}</td><td class="n hn">{f2(r["last"])}</td>'
             f'<td class="t" data-t="{r["time"]}">{ft(r["time"])}</td><td class="fl">{H.escape(fl) if fl else "clean"}</td></tr>')
 body=''.join(row(r) for r in R)
+import os
+T=json.load(open('track.json')) if os.path.exists('track.json') else []
+def stat(rs,label,note):
+    n=len(rs)
+    if not n:return f'<tr><td>{label}</td><td class="n" colspan="7">No trades yet. {note}</td></tr>'
+    tg=sum(1 for r in rs if r['res']=='target');sp=sum(1 for r in rs if r['res']=='stop');eo=n-tg-sp;R=sum(r['r'] for r in rs)
+    return f'<tr><td>{label}<div class="sm">{note}</div></td><td class="n">{n}</td><td class="n">{tg} ({100*tg/n:.0f}%)</td><td class="n">{sp} ({100*sp/n:.0f}%)</td><td class="n">{eo}</td><td class="n">{R/n:+.2f}</td><td class="n">{R:+.1f}</td><td class="n">{sum(1 for r in rs if r["r"]>0)*100//n}%</td></tr>'
+live=[t for t in T if t['source']=='live'];rep=[t for t in T if t['source']=='replay']
+def sub(L,m):return [t for t in L if t['pts']>=m]
+tr=''.join([stat(sub(live,5),'Live, 5+ points','Logged after each close, starting with the first session after launch'),stat(live,'Live, all setups','For comparison'),stat(sub(rep,5),'Nov 10-12, 5+ points','Filled in afterwards by replaying those days, not logged live'),stat(rep,'Nov 10-12, all setups','Same replay')])
+rec=sorted(sub(T,5),key=lambda t:(t['day'],t['time']),reverse=True)[:20]
+rt=''.join(f'<tr><td>{t["day"]}</td><td class="sym">{H.escape(t["sym"])}</td><td class="n">{t["pts"]}/6</td><td class="{"Targethit" if t["res"]=="target" else ("Stopped" if t["res"]=="stop" else "")}">{ {"target":"Target hit","stop":"Stopped","eod":"Open at close"}[t["res"]] }</td><td class="n">{t["r"]:+.2f}R</td><td>{"live" if t["source"]=="live" else "replay"}</td></tr>' for t in rec) or '<tr><td colspan="6">Nothing yet.</td></tr>'
 t=open('sl_template.html').read()
+t=t.replace('__TRACK_STATS__',tr).replace('__TRACK_ROWS__',rt)
 t=t.replace('__ROWS__',body).replace('__ASOF__',J['asof']).replace('__SESSION__',J['session']).replace('__NPASS__',str(J['n_pass']))
 open('public/index.html','w').write(t);open('public/data.json','w').write(json.dumps(J,separators=(',',':')))
 print(len(R),'rows written')

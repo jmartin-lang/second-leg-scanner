@@ -1,0 +1,36 @@
+name: track
+on:
+  schedule:
+    - cron: '30 21 * * 1-5'
+    - cron: '30 23 * * 1-5'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: track
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Replay the session and log results
+        run: |
+          python gen_sl.py
+          python track_sl.py
+        env:
+          ALPACA_KEY: ${{ secrets.ALPACA_KEY }}
+          ALPACA_SECRET: ${{ secrets.ALPACA_SECRET }}
+      - name: Save and rebuild page
+        run: |
+          git config user.name "tracker-bot"; git config user.email "bot@users.noreply.github.com"
+          git add track.json
+          if git diff --cached --quiet; then echo "nothing new"; else git commit -m "Track results"; git pull --rebase -q; git push; gh workflow run refresh.yml; fi
+        env:
+          GH_TOKEN: ${{ github.token }}

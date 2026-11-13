@@ -42,6 +42,7 @@ for s,g in G.items():
     d=M.get(s)
     if d is None or len(d)<30:continue
     d=d[d.index.normalize()==sess]
+    d=d[(d.index.hour*60+d.index.minute)<960]
     d=d.assign(rsi=rsi(d.close),e9=d.close.ewm(span=9,adjust=False).mean(),e21=d.close.ewm(span=21,adjust=False).mean())
     mins=d.index.hour*60+d.index.minute;rt=np.where((mins>=570)&(mins<960))[0]
     if len(rt)<15:continue
@@ -88,12 +89,16 @@ for s,g in G.items():
     ep=e['entry'] if e['entry'] else float(c[-1]);rk=ep-e['stop'];rr_=(e['tgt']-ep)/rk if rk>0 and e['tgt']>ep else None
     tmin=int(mins[e['i']]-570);leg_len=int(e['hi']-r0);rpct=rk/ep*100 if rk>0 else 0
     chk=[('Early (within 45 min of open)',tmin<=45),('Fast first leg (30 bars or fewer)',leg_len<=30),('Stop 1.2% or wider',rpct>=1.2),('Pullback 32% or deeper',e['ret']*100>=32),('R:R 2 or less',rr_ is not None and rr_<=2),('Clean thrust (8 or fewer new highs in the first leg)',int((np.diff(np.maximum.accumulate(h[r0:e['hi']+1]))>0).sum())<=8)]
+    if e['entry'] and rk>0:
+        rr_val=-1.0 if st=='Stopped' else ((e['tgt']-e['entry'])/rk if st=='Target hit' else (float(c[-1])-e['entry'])/rk)
+    else:rr_val=None
+    done=bool(mins[len(d)-1]>=955)
     pts=sum(1 for _,ok in chk if ok);met=[n for n,ok in chk if ok];miss=[n for n,ok in chk if not ok]
     sp=[float(x) for x in c[rt[0]:][::2]]
     rows.append(dict(symbol=s,status=st,atr_pct=round(g['atr_pct'],1),leg_pct=round(e['leg']/e['base']*100,2),retrace=round(e['ret']*100),band_bars=int(e['k']),rsi=round(float(r[-1]),1),
         entry=None if e['entry'] is None else round(float(e['entry']),2),stop=round(float(e['stop']),2),target=round(float(e['tgt']),2),
         rr=None if not risk else round(float((e['tgt']-e['entry'])/risk),2),last=round(float(c[-1]),2),
-        time=str(t)[:16],flags=fl,pts=pts,met=met,miss=miss,skip=bool(fl),group='Mover' if s in ex else U.get('groups',{}).get(s,''),spark=[round(x,2) for x in sp],
+        time=str(t)[:16],flags=fl,pts=pts,met=met,miss=miss,r=None if rr_val is None else round(float(rr_val),2),done=done,skip=bool(fl),group='Mover' if s in ex else U.get('groups',{}).get(s,''),spark=[round(x,2) for x in sp],
         lv=[round(float(e['stop']),2),round(float(e['tgt']),2)],asof=str(pd.Timestamp(end).tz_convert('America/New_York'))[:16]))
 order={'Triggered':0,'Ready':1,'Cooling':2,'Target hit':3,'Stopped':4}
 rows.sort(key=lambda x:(order[x['status']],x['time']),reverse=False)
