@@ -1,7 +1,7 @@
 """Second-leg scanner: thrust -> shallow pullback -> RSI cools in 44-60 -> closes >60 over 9/21 EMA. 1-minute bars, entries by 12:00 ET."""
 import json,sys,requests,numpy as np,pandas as pd
 from common import bars,HDR
-P=dict(atr_min=4.5,leg_atr=0.4,ret_lo=0.23,ret_hi=0.786,band=(44,60),band_bars=6,buf=0.002,cut=12*60)
+P=dict(move5_min=3.0,atr_min=4.5,leg_atr=0.4,ret_lo=0.23,ret_hi=0.786,band=(44,60),band_bars=6,buf=0.002,cut=12*60)
 U=json.load(open('universe.json'));syms=list(U['symbols'])
 now=pd.Timestamp.now(tz='UTC');end=(now-pd.Timedelta(minutes=16)).strftime('%Y-%m-%dT%H:%M:%SZ')
 def extras():
@@ -25,9 +25,11 @@ def gate(s,d):
     atr=tr.tail(14).mean();last=d.iloc[-1]
     if atr/last.close*100<P['atr_min'] or last.close<5:return None
     c=d.close;ret=(c.iloc[-1]/c.iloc[-21]-1)*100 if len(c)>21 else 0
+    ret5=(c.iloc[-1]/c.iloc[-6]-1)*100
+    if abs(ret5)<P['move5_min']:return None
     d40=d.tail(41);cc=d40.close.pct_change().abs()*100;gp=((d40.open/d40.close.shift()-1).abs()*100)
     rng=last.high-last.low
-    return dict(atr=atr,atr_pct=atr/last.close*100,prev_high=last.high,prev_close=last.close,ret20=ret,
+    return dict(ret5=ret5,atr=atr,atr_pct=atr/last.close*100,prev_high=last.high,prev_close=last.close,ret20=ret,
         quiet40=bool(cc.tail(40).max()<6 and gp.tail(40).max()<4),
         far200=bool(len(c)>=200 and c.iloc[-1]/c.tail(200).mean()-1<-0.088),
         closed_low=bool(rng>0 and (last.close-last.low)/rng<=0.1))
@@ -95,7 +97,7 @@ for s,g in G.items():
     done=bool(mins[len(d)-1]>=955)
     pts=sum(1 for _,ok in chk if ok);met=[n for n,ok in chk if ok];miss=[n for n,ok in chk if not ok]
     sp=[float(x) for x in c[rt[0]:][::2]]
-    rows.append(dict(symbol=s,status=st,atr_pct=round(g['atr_pct'],1),leg_pct=round(e['leg']/e['base']*100,2),retrace=round(e['ret']*100),band_bars=int(e['k']),rsi=round(float(r[-1]),1),
+    rows.append(dict(symbol=s,status=st,atr_pct=round(g['atr_pct'],1),ret5=round(g['ret5'],1),leg_pct=round(e['leg']/e['base']*100,2),retrace=round(e['ret']*100),band_bars=int(e['k']),rsi=round(float(r[-1]),1),
         entry=None if e['entry'] is None else round(float(e['entry']),2),stop=round(float(e['stop']),2),target=round(float(e['tgt']),2),
         rr=None if not risk else round(float((e['tgt']-e['entry'])/risk),2),last=round(float(c[-1]),2),
         time=str(t)[:16],flags=fl,pts=pts,met=met,miss=miss,r=None if rr_val is None else round(float(rr_val),2),done=done,skip=bool(fl),group='Mover' if s in ex else U.get('groups',{}).get(s,''),spark=[round(x,2) for x in sp],
